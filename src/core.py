@@ -205,11 +205,11 @@ class HybridRetriever:
                rerank: bool = True) -> List[Dict]:
         """Hybrid search with semantic + BM25"""
         
-        # Semantic search
+        # Semantic search (filters applied in ChromaDB query)
         semantic_results = self._semantic_search(query, n_results * 2, filters)
         
-        # BM25 search
-        bm25_results = self._bm25_search(query, n_results * 2)
+        # BM25 search (apply filters post-search)
+        bm25_results = self._bm25_search(query, n_results * 2, filters)
         
         # Merge and deduplicate
         merged = self._merge_results(semantic_results, bm25_results)
@@ -244,8 +244,8 @@ class HybridRetriever:
             logger.error(f"Semantic search failed: {e}")
             return []
     
-    def _bm25_search(self, query: str, n_results: int) -> List[Dict]:
-        """BM25 lexical search"""
+    def _bm25_search(self, query: str, n_results: int, filters: Optional[Dict] = None) -> List[Dict]:
+        """BM25 lexical search with optional filtering"""
         if not self.bm25_index or not self.bm25_docs:
             return []
         
@@ -253,17 +253,37 @@ class HybridRetriever:
             tokenized_query = query.lower().split()
             scores = self.bm25_index.get_scores(tokenized_query)
             
-            top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:n_results]
+            # Get all indices sorted by score
+            all_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
             
             results = []
-            for idx in top_indices:
-                if scores[idx] > 0:
-                    results.append({
-                        'content': self.bm25_docs['documents'][idx],
-                        'metadata': self.bm25_docs['metadatas'][idx],
-                        'score': scores[idx],
-                        'source': 'bm25'
-                    })
+            for idx in all_indices:
+                if scores[idx] <= 0:
+                    continue
+                
+                metadata = self.bm25_docs['metadatas'][idx]
+                
+                # Apply filters if provided
+                if filters:
+                    matches_filter = True
+                    for key, value in filters.items():
+                        if metadata.get(key) != value:
+                            matches_filter = False
+                            break
+                    if not matches_filter:
+                        continue
+                
+                results.append({
+                    'content': self.bm25_docs['documents'][idx],
+                    'metadata': metadata,
+                    'score': scores[idx],
+                    'source': 'bm25'
+                })
+                
+                # Stop once we have enough results
+                if len(results) >= n_results:
+                    break
+            
             return results
         except Exception as e:
             logger.error(f"BM25 search failed: {e}")
