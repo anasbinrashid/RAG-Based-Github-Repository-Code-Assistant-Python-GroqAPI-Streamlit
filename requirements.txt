@@ -1,28 +1,21 @@
 # Core Dependencies
 groq>=0.4.0
-chromadb>=0.4.18
-sentence-transformers>=2.2.2
+chromadb>=0.4.22
+sentence-transformers>=2.3.0
 tiktoken>=0.5.0
 python-dotenv>=1.0.0
 
-# Search & Ranking (NEW - for hybrid search)
+# Search & Ranking
 rank-bm25>=0.2.2
+cross-encoder>=1.2.0
 
 # Repository Processing
 GitPython>=3.1.40
 
 # UI
-streamlit>=1.29.0
+streamlit>=1.31.0
 pandas>=2.1.0
 plotly>=5.18.0
 
 # Utilities
 tqdm>=4.66.0
-numpy>=1.24.3
-requests>=2.31.0
-urllib3>=2.1.0
-
-# Text processing
-nltk>=3.8.1
-tokenizers>=0.15.0
-chardet>=5.2.0

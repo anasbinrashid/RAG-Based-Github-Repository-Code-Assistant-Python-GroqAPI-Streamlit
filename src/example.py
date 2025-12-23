@@ -296,4 +296,3 @@ if __name__ == "__main__":
             print(f"Available: {', '.join(demos.keys())}")
     else:
         run_all_demos()
-

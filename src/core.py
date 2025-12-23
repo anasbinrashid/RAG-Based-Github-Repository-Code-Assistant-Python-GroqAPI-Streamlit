@@ -297,7 +297,7 @@ class HybridRetriever:
 class EnhancedRAGEngine:
     """Complete RAG engine with advanced retrieval and generation"""
     
-    def __init__(self, db_path: str = "data/chromadb", model: str = "llama-3.1-70b-versatile"):
+    def __init__(self, db_path: str = "data/chromadb_v2", model: str = "llama-3.1-70b-versatile"):
         self.db_path = Path(db_path)
         self.model = model
         
@@ -316,9 +316,9 @@ class EnhancedRAGEngine:
         )
         
         try:
-            self.collection = chroma_client.get_collection("code_chunks", embedding_function=embedding_fn)
+            self.collection = chroma_client.get_collection("code_chunks_v2", embedding_function=embedding_fn)
         except:
-            self.collection = chroma_client.create_collection("code_chunks", embedding_function=embedding_fn)
+            self.collection = chroma_client.create_collection("code_chunks_v2", embedding_function=embedding_fn)
         
         # Initialize components
         self.chunker = ASTAwareChunker()
@@ -493,4 +493,3 @@ Provide a comprehensive answer based on the code context:"""
         except Exception as e:
             logger.error(f"Stats failed: {e}")
             return {'error': str(e)}
-

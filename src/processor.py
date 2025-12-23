@@ -240,7 +240,7 @@ def main():
     parser.add_argument("repo_url", help="Repository URL")
     parser.add_argument("--name", help="Repository name")
     parser.add_argument("--workers", type=int, default=4, help="Parallel workers")
-    parser.add_argument("--db-path", default="data/chromadb", help="Database path")
+    parser.add_argument("--db-path", default="data/chromadb_v2", help="Database path")
     
     args = parser.parse_args()
     
@@ -271,4 +271,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

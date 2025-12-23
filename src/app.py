@@ -238,15 +238,17 @@ def render_query_tab():
     with st.expander("⚙️ Advanced Filters", expanded=False):
         col1, col2, col3 = st.columns(3)
         
-        stats = load_stats()
-        
         with col1:
-            language_options = ["All"] + list(stats.get('languages', {}).keys()) if stats else ["All"]
-            language_filter = st.selectbox("Language", language_options)
+            language_filter = st.selectbox(
+                "Language",
+                ["All"] + list(load_stats().get('languages', {}).keys()) if load_stats() else ["All"]
+            )
         
         with col2:
-            repo_options = ["All"] + list(stats.get('repositories', {}).keys()) if stats else ["All"]
-            repo_filter = st.selectbox("Repository", repo_options)
+            repo_filter = st.selectbox(
+                "Repository",
+                ["All"] + list(load_stats().get('repositories', {}).keys()) if load_stats() else ["All"]
+            )
         
         with col3:
             n_results = st.slider("Results", 3, 15, 8)
