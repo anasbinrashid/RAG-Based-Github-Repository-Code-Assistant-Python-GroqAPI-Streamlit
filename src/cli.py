@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Optional
 import logging
 
+# Ensure src directory is in path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
 from core import EnhancedRAGEngine
 from processor import RepositoryProcessor
 
@@ -46,15 +49,18 @@ class InteractiveCLI:
             print("Set it in .env file or export GROQ_API_KEY=your_key")
             return
         
-        # Initialize
-        try:
-            print(f"\n{Colors.CYAN}Initializing RAG engine...{Colors.END}")
-            self.engine = EnhancedRAGEngine()
-            self.processor = RepositoryProcessor(self.engine)
-            print(f"{Colors.GREEN}✓ Ready!{Colors.END}\n")
-        except Exception as e:
-            print(f"{Colors.RED}Initialization failed: {e}{Colors.END}")
-            return
+        # Initialize only if not already initialized
+        if self.engine is None:
+            try:
+                print(f"\n{Colors.CYAN}Initializing RAG engine...{Colors.END}")
+                self.engine = EnhancedRAGEngine()
+                self.processor = RepositoryProcessor(self.engine)
+                print(f"{Colors.GREEN}✓ Ready!{Colors.END}\n")
+            except Exception as e:
+                print(f"{Colors.RED}Initialization failed: {e}{Colors.END}")
+                return
+        else:
+            print(f"{Colors.GREEN}✓ Engine already initialized!{Colors.END}\n")
         
         # Show stats
         self.cmd_stats()

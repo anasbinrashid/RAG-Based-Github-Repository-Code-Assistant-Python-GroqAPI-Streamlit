@@ -5,6 +5,7 @@ Production Streamlit UI for Code RAG System
 
 import streamlit as st
 import os
+import sys
 import json
 import pandas as pd
 from datetime import datetime
@@ -12,6 +13,9 @@ from pathlib import Path
 import plotly.graph_objects as go
 import plotly.express as px
 from typing import Dict, List
+
+# Ensure src directory is in path for imports
+sys.path.insert(0, str(Path(__file__).parent))
 
 from core import EnhancedRAGEngine
 from processor import RepositoryProcessor

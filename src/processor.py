@@ -41,9 +41,11 @@ class RepositoryProcessor:
         self.engine = engine
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
+        self.default_max_workers = int(os.getenv("MAX_WORKERS", "4"))
+        self.batch_size = int(os.getenv("BATCH_SIZE", "100"))
     
     def process_repository(self, repo_url: str, repo_name: Optional[str] = None, 
-                          max_workers: int = 4) -> Dict:
+                          max_workers: int = None) -> Dict:
         """Process entire repository with parallel file processing"""
         
         try:
@@ -69,8 +71,9 @@ class RepositoryProcessor:
             self._clear_repo_data(repo_name)
             
             # Process files in parallel
+            workers = max_workers or self.default_max_workers
             all_chunks = []
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            with ThreadPoolExecutor(max_workers=workers) as executor:
                 futures = {
                     executor.submit(self._process_file, f, repo_path, repo_name): f 
                     for f in files
@@ -146,7 +149,7 @@ class RepositoryProcessor:
             try:
                 if file_path.stat().st_size > 1024 * 1024:
                     continue
-            except:
+            except OSError:
                 continue
             
             files.append(file_path)
@@ -179,7 +182,7 @@ class RepositoryProcessor:
         for encoding in ['utf-8', 'latin-1', 'ascii', 'cp1252']:
             try:
                 return file_path.read_text(encoding=encoding)
-            except:
+            except (UnicodeDecodeError, IOError, OSError):
                 continue
         return None
     
@@ -193,8 +196,9 @@ class RepositoryProcessor:
         except Exception as e:
             logger.warning(f"Failed to clear existing data: {e}")
     
-    def _insert_chunks(self, chunks: List[CodeChunk], batch_size: int = 100):
+    def _insert_chunks(self, chunks: List[CodeChunk], batch_size: int = None):
         """Insert chunks into database in batches"""
+        batch_size = batch_size or self.batch_size
         logger.info(f"Inserting {len(chunks)} chunks")
         
         for i in range(0, len(chunks), batch_size):

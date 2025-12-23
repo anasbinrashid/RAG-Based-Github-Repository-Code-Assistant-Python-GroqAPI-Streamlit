@@ -5,7 +5,13 @@ Demonstrates all features of the Code RAG system
 """
 
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
+
+# Ensure src directory is in path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
 from core import EnhancedRAGEngine
 from processor import RepositoryProcessor
 

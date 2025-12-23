@@ -24,9 +24,13 @@ import tiktoken
 from groq import Groq
 from dotenv import load_dotenv
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 load_dotenv()
+
+# Configure logging from environment
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(level=getattr(logging, log_level, logging.INFO), 
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 @dataclass
 class CodeChunk:
@@ -51,6 +55,8 @@ class ASTAwareChunker:
     
     def __init__(self):
         self.tokenizer = tiktoken.get_encoding("cl100k_base")
+        self.chunk_size = int(os.getenv("CHUNK_SIZE", "100"))
+        self.chunk_overlap = int(os.getenv("CHUNK_OVERLAP", "20"))
     
     def chunk_python(self, content: str, filepath: Path, repo_name: str) -> List[CodeChunk]:
         """Parse Python with AST for semantic chunks"""
@@ -126,8 +132,10 @@ class ASTAwareChunker:
         return complexity
     
     def _chunk_by_lines(self, content: str, filepath: Path, repo_name: str, language: str, 
-                        chunk_size: int = 100, overlap: int = 20) -> List[CodeChunk]:
+                        chunk_size: int = None, overlap: int = None) -> List[CodeChunk]:
         """Fallback line-based chunking with overlap"""
+        chunk_size = chunk_size or self.chunk_size
+        overlap = overlap or self.chunk_overlap
         lines = content.split('\n')
         chunks = []
         
@@ -193,7 +201,8 @@ class HybridRetriever:
         except Exception as e:
             logger.warning(f"Failed to build BM25 index: {e}")
     
-    def search(self, query: str, n_results: int = 10, filters: Optional[Dict] = None) -> List[Dict]:
+    def search(self, query: str, n_results: int = 10, filters: Optional[Dict] = None, 
+               rerank: bool = True) -> List[Dict]:
         """Hybrid search with semantic + BM25"""
         
         # Semantic search
@@ -205,8 +214,8 @@ class HybridRetriever:
         # Merge and deduplicate
         merged = self._merge_results(semantic_results, bm25_results)
         
-        # Rerank top candidates
-        if len(merged) > n_results:
+        # Rerank top candidates (if enabled)
+        if rerank and len(merged) > n_results:
             reranked = self._rerank(query, merged[:n_results * 2])
             return reranked[:n_results]
         
@@ -297,9 +306,12 @@ class HybridRetriever:
 class EnhancedRAGEngine:
     """Complete RAG engine with advanced retrieval and generation"""
     
-    def __init__(self, db_path: str = "data/chromadb_v2", model: str = "llama-3.1-70b-versatile"):
-        self.db_path = Path(db_path)
-        self.model = model
+    def __init__(self, db_path: str = None, model: str = None):
+        # Use environment variables with defaults
+        self.db_path = Path(db_path or os.getenv("DATABASE_PATH", "data/chromadb_v2"))
+        self.model = model or os.getenv("MODEL", "llama-3.3-70b-versatile")
+        self.default_n_results = int(os.getenv("DEFAULT_N_RESULTS", "8"))
+        self.rerank_enabled = os.getenv("RERANK_ENABLED", "true").lower() == "true"
         
         # Initialize Groq
         self.groq_api_key = os.getenv("GROQ_API_KEY")
@@ -317,17 +329,18 @@ class EnhancedRAGEngine:
         
         try:
             self.collection = chroma_client.get_collection("code_chunks_v2", embedding_function=embedding_fn)
-        except:
+        except Exception:
             self.collection = chroma_client.create_collection("code_chunks_v2", embedding_function=embedding_fn)
         
         # Initialize components
         self.chunker = ASTAwareChunker()
         self.retriever = HybridRetriever(self.collection)
         
-        logger.info(f"Initialized RAG engine with {model}")
+        logger.info(f"Initialized RAG engine with {self.model}")
     
-    def query(self, query: str, n_results: int = 8, filters: Optional[Dict] = None) -> Dict:
+    def query(self, query: str, n_results: int = None, filters: Optional[Dict] = None) -> Dict:
         """Process query with retrieval and generation"""
+        n_results = n_results or self.default_n_results
         start_time = datetime.now()
         
         try:
@@ -337,7 +350,8 @@ class EnhancedRAGEngine:
             # Retrieve with all query variations
             all_chunks = []
             for q in expanded_queries:
-                chunks = self.retriever.search(q, n_results=n_results, filters=filters)
+                chunks = self.retriever.search(q, n_results=n_results, filters=filters, 
+                                               rerank=self.rerank_enabled)
                 all_chunks.extend(chunks)
             
             # Deduplicate and rank

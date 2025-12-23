@@ -7,7 +7,6 @@ python-dotenv>=1.0.0
 
 # Search & Ranking
 rank-bm25>=0.2.2
-cross-encoder>=1.2.0
 
 # Repository Processing
 GitPython>=3.1.40
