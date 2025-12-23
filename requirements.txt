@@ -1,31 +1,28 @@
-# Core dependencies
-streamlit==1.29.0
-pandas==2.1.4
+# Core Dependencies
+groq>=0.4.0
+chromadb>=0.4.18
+sentence-transformers>=2.2.2
+tiktoken>=0.5.0
+python-dotenv>=1.0.0
 
-# AI/ML dependencies
-groq==0.4.1
-chromadb==0.4.18
-sentence-transformers==2.2.2
+# Search & Ranking (NEW - for hybrid search)
+rank-bm25>=0.2.2
 
-# Git and repository handling
-GitPython==3.1.40
+# Repository Processing
+GitPython>=3.1.40
+
+# UI
+streamlit>=1.29.0
+pandas>=2.1.0
+plotly>=5.18.0
 
 # Utilities
-python-dotenv==1.0.0
-pathlib2==2.3.7.post1
+tqdm>=4.66.0
+numpy>=1.24.3
+requests>=2.31.0
+urllib3>=2.1.0
 
-# Additional dependencies that may be needed
-numpy==1.24.3
-requests==2.31.0
-urllib3==2.1.0
-
-# For better text processing
-nltk==3.8.1
-tokenizers==0.15.0
-
-# Threading and async support
-asyncio
-threading
-
-# File handling
-chardet==5.2.0
+# Text processing
+nltk>=3.8.1
+tokenizers>=0.15.0
+chardet>=5.2.0
