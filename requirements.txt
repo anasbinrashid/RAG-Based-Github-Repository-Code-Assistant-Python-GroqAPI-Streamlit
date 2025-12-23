@@ -1,37 +1,31 @@
 # Core dependencies
-groq>=0.9.0
-langchain>=0.2.0
-langchain-community>=0.2.0
-langgraph>=0.2.0
+streamlit==1.29.0
+pandas==2.1.4
 
-# Vector database and embeddings
-chromadb>=0.4.0
-sentence-transformers>=2.7.0
-faiss-cpu>=1.7.4
+# AI/ML dependencies
+groq==0.4.1
+chromadb==0.4.18
+sentence-transformers==2.2.2
 
-# Data processing
-pandas>=2.0.0
-numpy>=1.24.0
-tqdm>=4.66.0
+# Git and repository handling
+GitPython==3.1.40
 
-# HTTP and API
-requests>=2.31.0
-httpx>=0.27.0
+# Utilities
+python-dotenv==1.0.0
+pathlib2==2.3.7.post1
 
-# Streamlit and visualization
-streamlit>=1.28.0
-plotly>=5.17.0
+# Additional dependencies that may be needed
+numpy==1.24.3
+requests==2.31.0
+urllib3==2.1.0
 
-# Environment and utilities
-python-dotenv>=1.0.0
-gitpython>=3.1.40
+# For better text processing
+nltk==3.8.1
+tokenizers==0.15.0
 
-# Data serialization
-json5>=0.9.0
-dataclasses-json>=0.6.0
-pydantic>=2.0.0
-typing-extensions>=4.0.0
+# Threading and async support
+asyncio
+threading
 
-# Development tools (optional - remove if causing issues)
-# jupyter>=1.0.0
-# ipykernel>=6.0.0
+# File handling
+chardet==5.2.0
