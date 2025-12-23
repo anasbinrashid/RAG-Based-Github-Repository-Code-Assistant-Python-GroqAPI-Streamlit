@@ -45,24 +45,31 @@ st.markdown("""
     
     .metric-container {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem;
+        padding: 1rem;
         border-radius: 12px;
         color: white;
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        min-height: 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
     }
     
     .metric-value {
-        font-size: 2.5rem;
+        font-size: 1.8rem;
         font-weight: 700;
-        margin: 0.5rem 0;
+        margin: 0.3rem 0;
+        word-break: break-word;
     }
     
     .metric-label {
-        font-size: 0.9rem;
+        font-size: 0.75rem;
         opacity: 0.9;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
+        word-break: break-word;
     }
     
     .chunk-card {
@@ -121,20 +128,27 @@ def init_session_state():
             st.session_state[key] = value
 
 
-def load_engine():
-    """Load RAG engine"""
+def load_engine(show_status: bool = False):
+    """Load RAG engine and connect to persisted database"""
     if st.session_state.engine is None:
         if not os.getenv("GROQ_API_KEY"):
             st.error("❌ GROQ_API_KEY environment variable required!")
             st.stop()
         
         try:
-            with st.spinner("🔧 Initializing RAG engine..."):
+            with st.spinner("🔧 Initializing RAG engine... (this may take a moment on first run)"):
                 st.session_state.engine = EnhancedRAGEngine()
                 st.session_state.processor = RepositoryProcessor(st.session_state.engine)
+            
+            if show_status:
                 st.success("✅ Engine initialized successfully!")
+            
+            # Refresh stats after engine init to load persisted data
+            load_stats(force_refresh=True)
         except Exception as e:
             st.error(f"❌ Initialization failed: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc(), language="python")
             st.stop()
 
 
@@ -242,17 +256,16 @@ def render_query_tab():
     with st.expander("⚙️ Advanced Filters", expanded=False):
         col1, col2, col3 = st.columns(3)
         
+        # Get stats safely
+        current_stats = load_stats() or {}
+        
         with col1:
-            language_filter = st.selectbox(
-                "Language",
-                ["All"] + list(load_stats().get('languages', {}).keys()) if load_stats() else ["All"]
-            )
+            lang_options = ["All"] + list(current_stats.get('languages', {}).keys())
+            language_filter = st.selectbox("Language", lang_options)
         
         with col2:
-            repo_filter = st.selectbox(
-                "Repository",
-                ["All"] + list(load_stats().get('repositories', {}).keys()) if load_stats() else ["All"]
-            )
+            repo_options = ["All"] + list(current_stats.get('repositories', {}).keys())
+            repo_filter = st.selectbox("Repository", repo_options)
         
         with col3:
             n_results = st.slider("Results", 3, 15, 8)
@@ -281,36 +294,47 @@ def render_query_tab():
         st.rerun()
     
     if submit and query.strip():
-        load_engine()
-        
-        # Build filters
-        filters = {}
-        if language_filter != "All":
-            filters['language'] = language_filter
-        if repo_filter != "All":
-            filters['repo_name'] = repo_filter
-        
-        with st.spinner("🔍 Searching codebase..."):
-            response = st.session_state.engine.query(
-                query.strip(),
-                n_results=n_results,
-                filters=filters if filters else None
-            )
-        
-        if response['success']:
-            # Add to history
-            st.session_state.conversation_history.insert(0, {
-                'query': query,
-                'response': response,
-                'timestamp': datetime.now()
-            })
+        try:
+            load_engine()
             
-            # Keep last 50
-            st.session_state.conversation_history = st.session_state.conversation_history[:50]
+            # Verify engine is ready
+            if st.session_state.engine is None:
+                st.error("❌ Engine not initialized. Please wait and try again.")
+                st.stop()
             
-            render_response(response, query)
-        else:
-            st.error(f"❌ {response.get('answer', 'Query failed')}")
+            # Build filters
+            filters = {}
+            if language_filter != "All":
+                filters['language'] = language_filter
+            if repo_filter != "All":
+                filters['repo_name'] = repo_filter
+            
+            with st.spinner("🔍 Searching codebase..."):
+                response = st.session_state.engine.query(
+                    query.strip(),
+                    n_results=n_results,
+                    filters=filters if filters else None
+                )
+            
+            if response['success']:
+                # Add to history
+                st.session_state.conversation_history.insert(0, {
+                    'query': query,
+                    'response': response,
+                    'timestamp': datetime.now()
+                })
+                
+                # Keep last 50
+                st.session_state.conversation_history = st.session_state.conversation_history[:50]
+                
+                render_response(response, query)
+            else:
+                st.error(f"❌ {response.get('answer', 'Query failed')}")
+        
+        except Exception as e:
+            st.error(f"❌ Error processing query: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc(), language="python")
 
 
 def render_response(response: Dict, query: str):
@@ -457,7 +481,7 @@ def render_repo_tab():
         max_workers = st.number_input("Parallel Workers", 1, 8, 4)
     
     if st.button("🚀 Process Repository", type="primary", disabled=not repo_url, use_container_width=True):
-        load_engine()
+        load_engine(show_status=True)
         
         with st.spinner(f"⏳ Processing {repo_url}..."):
             progress_bar = st.progress(0)
@@ -553,6 +577,9 @@ def main():
         st.error("❌ GROQ_API_KEY environment variable required!")
         st.info("Set it in your .env file or environment")
         st.stop()
+    
+    # Initialize engine on startup to load persisted data
+    load_engine()
     
     # Sidebar
     render_sidebar()
